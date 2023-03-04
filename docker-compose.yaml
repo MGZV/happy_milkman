@@ -1,6 +1,4 @@
-# docker-compose.yml
-
-version: '3.8'
+version: '3'
 
 services:
   web:
@@ -11,21 +9,35 @@ services:
     volumes:
       - .:/happy_milkman
     ports:
-      - 8000:8000
+      - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
     depends_on:
-      - db
-  db:
-    image: postgres:15-alpine
+      - postgres
+
+  postgres:
+    build:
+      context: postgres
+      args:
+        - POSTGRES_USER=${POSTGRES_USER}
+        - POSTGRES_DB=${POSTGRES_DB}
+        - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    restart: on-failure
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     ports:
-      - 5434:5432
+      - "5454:5432"
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASS}
-      - POSTGRES_DB=${DB_NAME}
-
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+      - POSTGRES_USER=${POSTGRES_SUPERUSER}
+      - POSTGRES_PASSWORD=${POSTGRES_SUPERUSER_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER} -p 5454"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
 volumes:
   postgres_data:
